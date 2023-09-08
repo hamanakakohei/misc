@@ -56,7 +56,7 @@ def load_hic_for_powerlaw(args):
     for chrom in chromosomes:
         try:
             if args.hic_type == 'juicebox':
-                hic_file, hic_norm_file, hic_is_vc = get_hic_file(chrom, args.hicDir, allow_vc=False)
+                hic_file, hic_norm_file, hic_is_vc = get_hic_file(chrom, args.hicDir, allow_vc=True)
                 print("Working on {}".format(hic_file))
                 this_data = load_hic(hic_file = hic_file, 
                     hic_norm_file = hic_norm_file,
