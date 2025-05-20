@@ -202,6 +202,27 @@ get_tommo_maf = function( TOMMO_col ){
 }
 
 
+cat_another_caller_variants( DF_ANNOVAR, DF_ANOTHER ){
+  # DF_ANNOVAR にcaller_name列が無ければ追加する
+  # DF_ANOTHER の列フォーマットは：
+  # - caller_name
+  # - chr
+  # - sta
+  # - end
+  # - gene
+  # - variant.type（実際は必要な情報をひとかたまりにしてここに詰め込む）
+  # - Sample_XX (genotype情報が大切)
+
+  if( "caller_name" !%in% col_names( DF_ANNOVAR ) ){
+    DF_ANNOVAR$caller_name = "Annovar"
+  }
+  
+  bind_rows( DF_ANNOVAR, DF_ANOTHER) %>%
+    return
+}
+
+
+
 
 #filter_by_maf = function( DF, HGVD, TOMMO, JPNCOUNT, EXACALL, EXACEAS ){
 #  filter( DF,
