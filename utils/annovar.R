@@ -6,8 +6,8 @@
 
 
 get_variant_carriers = function( DF ){
-  DF = select( DF, c( variant_id, Gene.refGene, starts_with("Sample_") ) ) %>% 
-    gather( key = sample, value = genotype, starts_with("Sample_") ) %>%
+  df_long = select( DF, c( variant_id, Gene.refGene, starts_with("Sample_") ) ) %>% 
+    pivot_longer( cols = starts_with("Sample_"), names_to = "sample", values_to = "genotype" ) %>%
     mutate( alt_count = case_when(
        str_detect( genotype, "^0/1" ) ~ 1,
        str_detect( genotype, "^1/0" ) ~ 1,
@@ -18,23 +18,26 @@ get_variant_carriers = function( DF ){
       TRUE ~ 0)
     ) 
   
-  variant_carriers = group_by( DF, variant_id, sample ) %>% 
-    summarise( total_alt_count = sum(alt_count) ) %>% 
+  variant_carriers = group_by( df_long, variant_id, sample ) %>% 
+    summarise( total_alt_count = sum(alt_count), .groups = "drop" ) %>% 
     filter( total_alt_count >= 1 ) %>% 
-    nest( -variant_id ) %>%
+    nest( data = everything(), .by = variant_id ) %>%
     mutate( carriers = map(data, connect_samples) ) %>% 
     unnest( carriers ) %>%
     select( variant_id, carriers )
 
-  gene_carriers_2hit = group_by( DF, Gene.refGene, sample ) %>% 
-    summarise( total_alt_count = sum(alt_count) ) %>% 
+  gene_carriers_2hit = group_by( df_long, Gene.refGene, sample ) %>% 
+    summarise( total_alt_count = sum(alt_count), .groups = "drop" ) %>% 
     filter( total_alt_count >= 2 ) %>% 
-    nest( -Gene.refGene ) %>% 
+    nest( data = everything(), .by = Gene.refGene ) %>% 
     mutate( carriers_2hit_on_the_gene = map(data, connect_samples) ) %>% 
     unnest( carriers_2hit_on_the_gene) %>%
-    select( Gene.refGene, carriers_2hit_on_the_gene ) %>% 
+    select( Gene.refGene, carriers_2hit_on_the_gene )
 
-  return( list(variant_carriers = variant_carriers, gene_carriers_2hit = gene_carriers_2hit) )
+  return( list(
+    variant_carriers = variant_carriers, 
+    gene_carriers_2hit = gene_carriers_2hit
+  ) )
 }
 
 
@@ -46,7 +49,7 @@ connect_samples = function(DF){
 }
 
 
-filter_af_threshold <- function(DF, af_col, af_threshold) {
+filter_af_threshold = function(DF, af_col, af_threshold) {
   if (!is.na(af_threshold)) {
     DF = filter(DF, !!sym(af_col) < af_threshold)
   }
@@ -134,7 +137,7 @@ get_JpnMutation_from_INFO = function( INFO ){
   # -- 常染色体：JpnMutation=+:575:572
   # -- 性染色体：JpnMutation=+:281,294:8,19
   INFO_v = strsplit( INFO, ";" )[[1]]
-  JPN = tail( length( INFO_v ), 1 )
+  JPN = tail( INFO_v, 1 )
 
   if ( startsWith( JPN, "JpnMutation=" ) ) {
     JPN_v = strsplit( sub( "JpnMutation=", "", JPN ), ":" )[[1]]
@@ -202,25 +205,38 @@ get_tommo_maf = function( TOMMO_col ){
 }
 
 
-cat_another_caller_variants( DF_ANNOVAR, DF_ANOTHER ){
-  # DF_ANNOVAR にcaller_name列が無ければ追加する
-  # DF_ANOTHER の列フォーマットは：
-  # - caller_name
-  # - chr
-  # - sta
-  # - end
-  # - gene
-  # - variant.type（実際は必要な情報をひとかたまりにしてここに詰め込む）
+cat_another_caller_variants = function( DF_ANNOVAR, DF_ANOTHER ){
+  # DF_ANNOVAR にCaller列が無ければ追加する
+  # DF_ANOTHER の列は以下をしっかり埋めておくと他の所のフィルターで事故が起きにくい：
+  # - Caller
+  # - Chr
+  # - Start
+  # - End
+  # - Func.refGene
+  # - Gene.refGene
+  # - GeneDetail.refGene
+  # - ExonicFunc.refGene
+  # - AAChange.refGene
   # - Sample_XX (genotype情報が大切)
+  require(dplyr)
 
-  if( "caller_name" !%in% col_names( DF_ANNOVAR ) ){
-    DF_ANNOVAR$caller_name = "Annovar"
+  if( !"Caller" %in% colnames( DF_ANNOVAR ) ){
+    DF_ANNOVAR$Caller = "Annovar"
   }
   
-  bind_rows( DF_ANNOVAR, DF_ANOTHER) %>%
-    return
+  DF_CATTED = bind_rows( DF_ANNOVAR, DF_ANOTHER)
+  # DF_CATTED[ is.na(DF_CATTED) ] = "."
+  return( DF_CATTED )
 }
 
+
+get_SpliceAI_max_score = function( SPLICEAI ){
+  if ( SPLICEAI == "." ) {
+     return( 0 )
+  } 
+  parts = str_split( SPLICEAI, "\\|" )[[1]][3:6]
+  return( max( as.numeric(parts) ) )
+}
 
 
 
