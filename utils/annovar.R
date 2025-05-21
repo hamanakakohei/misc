@@ -1,10 +1,6 @@
 #!/home/hamanaka/miniconda3/envs/misc/bin/Rscript
 
 
-#library(tidyverse)
-#library(argparser)
-
-
 get_variant_carriers = function( DF ){
   df_long = select( DF, c( variant_id, Gene.refGene, starts_with("Sample_") ) ) %>% 
     pivot_longer( cols = starts_with("Sample_"), names_to = "sample", values_to = "genotype" ) %>%
@@ -44,7 +40,8 @@ get_variant_carriers = function( DF ){
 connect_samples = function(DF){
   DF %>%
     pull(sample) %>% 
-    str_c(collapse=";") %>% 
+    str_c( collapse=";" ) %>% 
+    str_c( ";" ) %>% 
     return
 }
 
@@ -237,16 +234,3 @@ get_SpliceAI_max_score = function( SPLICEAI ){
   parts = str_split( SPLICEAI, "\\|" )[[1]][3:6]
   return( max( as.numeric(parts) ) )
 }
-
-
-
-#filter_by_maf = function( DF, HGVD, TOMMO, JPNCOUNT, EXACALL, EXACEAS ){
-#  filter( DF,
-#      hgvd_maf    <= HGVD    &
-#      tommo_maf   <= TOMMO   &
-#      ExAC_ALL    <= EXACALL &
-#      ExAC_EAS    <= EXACEAS &
-#      ( (jpn.symbol!="p" & jpn.count<=JPNCOUNT) | jpn.symbol=="p") 
-#    ) %>% 
-#    return
-#}
