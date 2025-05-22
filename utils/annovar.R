@@ -46,11 +46,17 @@ connect_samples = function(DF){
 }
 
 
+is_missing = function(x) {
+  is.null(x) || (length(x) == 1 && is.na(x))
+}
+
+
 filter_af_threshold = function(DF, af_col, af_threshold) {
-  if (!is.na(af_threshold)) {
-    DF = filter(DF, !!sym(af_col) < af_threshold)
+  if ( is_missing(af_threshold) ) {
+    return(DF)
   }
-  return(DF)
+
+  DF = filter(DF, !!sym(af_col) < af_threshold)
 }
 
 
@@ -86,20 +92,24 @@ filter_by_gene_mode_of_inheritance = function(DF, INHERITANCE){
 
   if ( INHERITANCE == "AD" ){
     filter( DF, 
-        G2P_allelic_requirement %in% c( "monoallelic_autosomal" ) |
-        GenCC_moi_title         %in% c( "Autosomal dominant", "Semidominant")
+        str_detect(G2P_allelic_requirement, "monoallelic_autosomal") |
+        str_detect(GenCC_moi_title, "Autosomal dominant") |
+        str_detect(GenCC_moi_title, "Semidominant")
       ) %>%
       return
   } else if ( INHERITANCE == "AR" ){
     filter( DF,
-        G2P_allelic_requirement %in% c( "biallelic_autosomal" ) |
-        GenCC_moi_title         %in% c( "Autosomal recessive", "Semidominant")
+        str_detect(G2P_allelic_requirement, "biallelic_autosomal") |
+        str_detect(GenCC_moi_title, "Autosomal recessive") |
+        str_detect(GenCC_moi_title, "Semidominant")
       ) %>%
       return
   } else if ( INHERITANCE == "XL" ){
     filter( DF,
-        G2P_allelic_requirement %in% c( "monoallelic_X_hemizygous", "monoallelic_X_heterozygous" ) |
-        GenCC_moi_title         %in% c( "X-linked", "X-linked recessive")
+        str_detect(G2P_allelic_requirement, "monoallelic_X_hemizygous") |
+        str_detect(G2P_allelic_requirement, "monoallelic_X_heterozygous") |
+        str_detect(GenCC_moi_title, "X-linked") |
+        str_detect(GenCC_moi_title, "X-linked recessive")
       ) %>%
       return
   } else {
